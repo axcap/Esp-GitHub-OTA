@@ -1,3 +1,4 @@
-# esp_ghota4Arduino
+# Esp-GitHub-OTA
 
-Simple port of esp_ghota by Fishwaldo to Arduino platform
+Inspired by esp_ghota by Fishwaldo
+Brings same functionality to Arduino platform

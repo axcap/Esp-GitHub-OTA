@@ -15,8 +15,9 @@
 #define SSID ""
 #define PASSWORD ""
 #define HOSTNAME "ESP32 OTA"
+#define LED_BUILTIN 13 
 
-
+void setup_wifi();
 void setup()
 {
   Serial.begin(115200);

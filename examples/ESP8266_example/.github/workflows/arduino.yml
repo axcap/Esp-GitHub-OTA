@@ -1,0 +1,46 @@
+name: Arduino
+on: [workflow_dispatch, push]
+
+env:
+  TARGET: nodemcuv2 # Run 'arduino-cli board listall' for a full list of available targets
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+    - name: Setup Arduino CLI
+      uses: arduino/setup-arduino-cli@v1
+
+    - name: Install dependencies
+      run: |
+        arduino-cli core update-index
+        curl https://arduino.esp8266.com/stable/package_esp8266com_index.json --output /home/runner/.arduino15/package_esp8266com_index.json
+        arduino-cli core install -v esp8266:esp8266 --additional-urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
+        arduino-cli config init
+        arduino-cli config set library.enable_unsafe_install true
+        arduino-cli lib install -v ArduinoJson
+        arduino-cli lib install -v --git-url https://github.com/axcap/Esp-GitHub-OTA.git
+
+    - name: Compile Sketch
+      run: arduino-cli compile -b esp8266:esp8266:${{ env.TARGET }} --output-dir build
+
+    - name: Archive Firmware Files
+      uses: actions/upload-artifact@v3
+      with: 
+        path: ./build/*ino.bin
+
+  Release:
+    needs: CI
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Firmware Files
+      uses: actions/download-artifact@v3
+
+    - name: Release Firmware
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: ./artifact/*.ino.bin
+        generateReleaseNotes: true
+        allowUpdates: true
