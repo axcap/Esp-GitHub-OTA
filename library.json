@@ -1,6 +1,6 @@
 {
     "name": "Esp-GitHub-OTA",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Arduino OTA updater that uses Github releases as storage",
     "keywords": "arduino, esp8266, esp32, ota",
     "authors":
@@ -10,7 +10,13 @@
         "url": "https://github.com/axcap"
       }
     ],
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/axcap/Esp-GitHub-OTA.git"
+    },
     "license": "MIT",
+    "homepage": "https://github.com/axcap/Esp-GitHub-OTA.git",
     "dependencies": {
         "bblanchon/ArduinoJson": "^6.20.0"
     },
