@@ -9,6 +9,10 @@
 // This is a link to repo where your firmware updates will be pulled from
 #define RELEASE_URL "https://api.github.com/repos/your_username/your_repo/releases/latest"
 
+// Use this version of the URL together with init_ota(VERSION, true) under debugging
+// to spare yourself from getting timeout from GitHub API
+#define RELEASE_URL "https://github.com/your_username/your_repo/releases/latest"
+
 #define DELAY_MS 1000
 
 #define SSID ""

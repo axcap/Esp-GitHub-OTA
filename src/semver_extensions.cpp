@@ -39,5 +39,5 @@ string render_to_string(semver_t* sem){
     semver_render(sem, (char*)str);
     auto value = string((char*)str);
     free(str);
-    return value.c_str();
+    return value;
 }
