@@ -39,7 +39,7 @@ jobs:
       with: 
         name: esp8266-firmware
         path: ".pio/build/nodemcuv2/firmware.bin"
-        
+
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -55,4 +55,3 @@ jobs:
         artifacts: release/*/*.bin
         generateReleaseNotes: true
         allowUpdates: true
-        #token: ${{ secrets.GITHUB_TOKEN }}
