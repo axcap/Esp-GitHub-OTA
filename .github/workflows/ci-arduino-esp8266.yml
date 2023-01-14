@@ -1,4 +1,4 @@
-name: CI
+name: CI-Arduino-Esp8266
 on: [workflow_dispatch, push]
 
 
