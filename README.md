@@ -1,3 +1,5 @@
+[![CI](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci.yml)
+
 # Esp-GitHub-OTA
 
 Inspired by [esp_ghota](https://github.com/Fishwaldo/esp_ghota) by **Fishwaldo**
