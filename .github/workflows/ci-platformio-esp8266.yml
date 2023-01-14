@@ -1,4 +1,4 @@
-name: CIPlatformIO-Esp8266
+name: CI-PlatformIO-Esp8266
 on: [workflow_dispatch, push]
 
 

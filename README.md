@@ -1,6 +1,6 @@
 |Example(Chip)/Platform   | Arduino  | PlatformIO  |
 |---|---|---|
-| Esp8266  | [![CI-Arduino-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml)  | [![CIPlatformIO-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml)  |
+| Esp8266  | [![CI-Arduino-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml)  | [![CI-PlatformIO-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml)  |
 |  Esp32 | [![CI-Arduino-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml)  | [![CI-PlatformIO-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml)  |
 
 # Esp-GitHub-OTA
