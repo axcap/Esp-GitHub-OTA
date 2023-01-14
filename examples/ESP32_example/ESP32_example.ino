@@ -1,3 +1,5 @@
+#define LED_BUILTIN 13
+
 #include <WiFi.h>
 #include <ota.h>
 
@@ -17,7 +19,6 @@
 #define SSID ""
 #define PASSWORD ""
 #define HOSTNAME "ESP32 OTA"
-#define LED_BUILTIN 13
 
 void setup_wifi();
 void setup()
