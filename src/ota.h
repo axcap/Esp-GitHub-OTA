@@ -5,7 +5,6 @@
 #include <ESP8266WiFi.h>
 #elif defined(ESP32)
 #include <WiFiClientSecure.h>
-#include "HttpsOTAUpdate.h"
 #endif
 
 #define CONTENT_LENGTH_HEADER "content-length"
