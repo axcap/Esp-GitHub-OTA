@@ -1,5 +1,3 @@
-#define LED_BUILTIN 13
-
 #include <WiFi.h>
 #include <ota.h>
 

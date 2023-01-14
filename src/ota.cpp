@@ -47,8 +47,9 @@ void init_ota(String version, bool fetch_url_via_redirect = false)
     // client.setTrustAnchors(&x509);
     client.setInsecure();
 #endif
-
+#ifdef LED_BUILTIN
     Updater.setLedPin(LED_BUILTIN, LOW);
+#endif
     Updater.onStart(update_started);
     Updater.onEnd(update_finished);
     Updater.onProgress(update_progress);
