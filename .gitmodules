@@ -1,0 +1,3 @@
+[submodule "examples/ESP8266_example"]
+	path = examples/ESP8266_example
+	url = git@github.com:axcap/ESP8266_example.git
