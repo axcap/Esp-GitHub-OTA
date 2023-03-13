@@ -1,5 +1,5 @@
-#ifndef ESP_GHOTA4ARDUINO_H
-#define ESP_GHOTA4ARDUINO_H
+#ifndef ESP_GITHUB_OTA_H
+#define ESP_GITHUB_OTA_H
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>

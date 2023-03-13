@@ -28,6 +28,13 @@ ESP8266HTTPUpdate Updater;
 HTTPUpdate Updater;
 #endif
 
+// Private functions definition
+void update_firmware(String url);
+void update_filesystem(String url);
+void print_update_result(HTTPUpdateResult result, const char* TAG);
+String get_redirect_location(String initial_url, WiFiClientSecure *client);
+
+
 void init_ota(String version)
 {
     init_ota(version, false);
@@ -37,6 +44,7 @@ void init_ota(String version, bool fetch_url_via_redirect = false)
 {
     ESP_LOGE("init_ota", "init_ota(version: %s, fetch_url_via_redirect: %d)\n", version.c_str(), fetch_url_via_redirect);
 
+    Updater.rebootOnUpdate(false);
     _fetch_url_via_redirect = fetch_url_via_redirect;
     current_version = from_string(version.c_str());
 
@@ -69,11 +77,42 @@ void handle_ota(String releaseUrl)
 
     if (url.length() > 0)
     {
-        ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
+        update_firmware(url);
 
-        auto ret = Updater.update(client, url);
-        switch (ret)
-        {
+        url.replace("firmware", "filesystem");
+        update_filesystem(url);
+
+        delay(1000);
+        ESP.restart();
+    }
+}
+
+void update_firmware(String url){
+    const char *TAG = "update_firmware";
+
+    ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
+
+    auto result = Updater.update(client, url);
+    print_update_result(result, TAG);
+}
+
+void update_filesystem(String url){
+    const char *TAG = "update_filesystem";
+
+    ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
+
+#ifdef ESP8266
+    auto result = Updater.updateFS(client, url);
+#elif defined(ESP32)
+    auto result = Updater.updateSpiffs(client, url);
+#endif
+
+    print_update_result(result, TAG);
+}
+
+void print_update_result(HTTPUpdateResult result, const char* TAG){
+    switch (result)
+    {
         case HTTP_UPDATE_FAILED:
             ESP_LOGI(TAG, "HTTP_UPDATE_FAILD Error (%d): %s\n", Updater.getLastError(), Updater.getLastErrorString().c_str());
             break;
@@ -83,7 +122,6 @@ void handle_ota(String releaseUrl)
         case HTTP_UPDATE_OK:
             ESP_LOGI(TAG, "HTTP_UPDATE_OK\n");
             break;
-        }
     }
 }
 
