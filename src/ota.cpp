@@ -28,7 +28,7 @@ ESP8266HTTPUpdate Updater;
 HTTPUpdate Updater;
 #endif
 
-// Private functions definition
+// Private function definitions
 void update_firmware(String url);
 void update_filesystem(String url);
 void print_update_result(HTTPUpdateResult result, const char* TAG);
@@ -258,9 +258,9 @@ void update_finished()
     ESP_LOGI("update_finished", "HTTP update process finished\n");
 }
 
-void update_progress(int currentyReceiced, int totalBytes)
+void update_progress(int currentlyReceiced, int totalBytes)
 {
-    ESP_LOGI("update_progress", "\rData received, Progress: %.2f %%", 100.0 * currentyReceiced / totalBytes);
+    ESP_LOGI("update_progress", "\rData received, Progress: %.2f %%", 100.0 * currentlyReceiced / totalBytes);
 }
 
 void update_error(int err)
