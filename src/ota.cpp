@@ -1,21 +1,11 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266httpUpdate.h>
-#define ESP_LOGE(tag, ...)      \
-  Serial.printf("[ %s ]", tag); \
-  Serial.printf(__VA_ARGS__)
-#define ESP_LOGW(tag, ...)      \
-  Serial.printf("[ %s ]", tag); \
-  Serial.printf(__VA_ARGS__)
-#define ESP_LOGI(tag, ...)      \
-  Serial.printf("[ %s ]", tag); \
-  Serial.printf(__VA_ARGS__)
-#define ESP_LOGD(tag, ...)      \
-  Serial.printf("[ %s ]", tag); \
-  Serial.printf(__VA_ARGS__)
-#define ESP_LOGV(tag, ...)      \
-  Serial.printf("[ %s ]", tag); \
-  Serial.printf(__VA_ARGS__)
+#define ESP_LOGE(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGW(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGI(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGD(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGV(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
 #elif defined(ESP32)
 #include <WiFiClientSecure.h>
 #include <Update.h>
