@@ -1,8 +1,8 @@
 [submodule "examples/ESP8266_example"]
 	path = examples/ESP8266_example
-	url = git@github.com:axcap/ESP8266_example.git
+	url = https://github.com/axcap/ESP8266_example.git
 	branch = master
 [submodule "examples/ESP32_example"]
 	path = examples/ESP32_example
-	url = git@github.com:axcap/ESP32_example.git
+	url = https://github.com/axcap/ESP32_example.git
 	branch = master
