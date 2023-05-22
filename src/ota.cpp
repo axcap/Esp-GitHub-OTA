@@ -49,7 +49,7 @@ void init_ota(String version, String filename)
 void init_ota(String version, String filename, bool fetch_url_via_redirect = false)
 {
     ESP_LOGE("init_ota", "init_ota(version: %s, filename: %s, fetch_url_via_redirect: %d)\n",
-        version.c_str(), filename, fetch_url_via_redirect);
+        version.c_str(), filename.c_str(), fetch_url_via_redirect);
 
     Updater.rebootOnUpdate(false);
     _fetch_url_via_redirect = fetch_url_via_redirect;
