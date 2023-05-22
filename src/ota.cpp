@@ -18,6 +18,7 @@
 #include "ota.h"
 
 bool _fetch_url_via_redirect = false;
+String _binary_filename = "firmware.bin";
 
 WiFiClientSecure client;
 semver_t current_version;
@@ -37,15 +38,22 @@ String get_redirect_location(String initial_url, WiFiClientSecure *client);
 
 void init_ota(String version)
 {
-    init_ota(version, false);
+    init_ota(version, _binary_filename, false);
 }
 
-void init_ota(String version, bool fetch_url_via_redirect = false)
+void init_ota(String version, String filename)
 {
-    ESP_LOGE("init_ota", "init_ota(version: %s, fetch_url_via_redirect: %d)\n", version.c_str(), fetch_url_via_redirect);
+    init_ota(version, filename, false);
+}
+
+void init_ota(String version, String filename, bool fetch_url_via_redirect = false)
+{
+    ESP_LOGE("init_ota", "init_ota(version: %s, filename: %s, fetch_url_via_redirect: %d)\n",
+        version.c_str(), filename, fetch_url_via_redirect);
 
     Updater.rebootOnUpdate(false);
     _fetch_url_via_redirect = fetch_url_via_redirect;
+    _binary_filename = filename;
     current_version = from_string(version.c_str());
 
 #ifdef ESP32
@@ -177,7 +185,7 @@ String get_updated_firmware_url_via_redirect(String releaseUrl, WiFiClientSecure
         ESP_LOGV(TAG, "Need update: %s\n", _new_version > current_version ? "yes" : "no");
         if (_new_version > current_version)
         {
-            browser_download_url = String(location + "/firmware.bin");
+            browser_download_url = String(location + "/" + _binary_filename);
             browser_download_url.replace("tag", "download");
         }
     }

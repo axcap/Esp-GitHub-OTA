@@ -12,7 +12,9 @@
 extern const char *github_certificate;
 
 void init_ota(String version);
+void init_ota(String version, String filename);
 void init_ota(String version, bool fetch_url_via_redirect);
+void init_ota(String version, String filename, bool fetch_url_via_redirect);
 void handle_ota(String releaseUrl);
 
 String get_updated_firmware_url_via_api(String releaseUrl, WiFiClientSecure* client);
