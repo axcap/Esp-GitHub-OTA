@@ -41,11 +41,6 @@ void init_ota(String version)
     init_ota(version, _binary_filename, false);
 }
 
-void init_ota(String version, String filename)
-{
-    init_ota(version, filename, false);
-}
-
 void init_ota(String version, String filename, bool fetch_url_via_redirect = false)
 {
     ESP_LOGE("init_ota", "init_ota(version: %s, filename: %s, fetch_url_via_redirect: %d)\n",
