@@ -82,8 +82,8 @@ void handle_ota(String releaseUrl)
     {
         update_firmware(url);
 
-        url.replace("firmware", "filesystem");
-        update_filesystem(url);
+        // url.replace("firmware", "filesystem");
+        // update_filesystem(url);
 
         delay(1000);
         ESP.restart();
