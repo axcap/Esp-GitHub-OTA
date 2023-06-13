@@ -37,4 +37,4 @@ Feel free to open Issues or create Pull requests :)
 Features:
 
   - add support for OTA LittleFS support -> [Issue #3](https://github.com/axcap/Esp-GitHub-OTA/issues/3) (Currently only tested on esp8266 (NodeMCU v3)
-  - New Interface using C++ Classes
+  - New interface using C++ Classes
