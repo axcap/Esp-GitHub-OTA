@@ -1,11 +1,11 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266httpUpdate.h>
-#define ESP_LOGE(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGW(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGI(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGD(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGV(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGE(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGW(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGI(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGD(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGV(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
 #elif defined(ESP32)
 #include <WiFiClientSecure.h>
 #include <Update.h>
@@ -13,6 +13,7 @@
 #include <HTTPUpdate.h>
 #endif
 
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "semver_extensions.h"
 #include "ota.h"
@@ -43,14 +44,18 @@ GitHubOTA::GitHubOTA(
     String release_url,
     String firmware_name,
     String filesystem_name,
+    String fs_pending_filename,
     bool fetch_url_via_redirect)
 {
   ESP_LOGV("GitHubOTA", "GitHubOTA(version: %s, fetch_url_via_redirect: %d)\n", version.c_str(), fetch_url_via_redirect);
+
+  LittleFS.begin();
 
   _version = from_string(version.c_str());
   _release_url = release_url;
   _firmware_name = firmware_name;
   _filesystem_name = filesystem_name;
+  _fs_pending_filename = fs_pending_filename;
   _fetch_url_via_redirect = fetch_url_via_redirect;
 
   Updater.rebootOnUpdate(false);
@@ -74,31 +79,54 @@ GitHubOTA::GitHubOTA(
 
 void GitHubOTA::handle()
 {
+  const char *TAG = "handle";
   syncClock();
 
   String base_url = _fetch_url_via_redirect ? get_updated_base_url_via_redirect() : get_updated_base_url_via_api();
+  ESP_LOGI(TAG, "base_url %s\n", base_url.c_str());
 
-  if (base_url.length() > 0)
-  {
-    update_firmware(base_url + _firmware_name);
-    update_filesystem(base_url + _filesystem_name);
+  if (fs_update_pending()){
+    auto result = update_filesystem(base_url + _filesystem_name);
 
-    delay(1000);
+    if (result != HTTP_UPDATE_FAILED){
+      fs_update_finished();
+    }
+
+    ESP_LOGI(TAG, "Restarting...\n");
     ESP.restart();
+  } else {
+    auto last_slash = base_url.lastIndexOf('/', base_url.length()-2);
+    auto semver_str = base_url.substring(last_slash + 1);
+    auto _new_version = from_string(semver_str.c_str());
+
+    if (update_required(_new_version)){
+      auto result = update_firmware(base_url + _firmware_name);
+
+      if (result != HTTP_UPDATE_FAILED){
+        fs_schedule_update();
+      }
+
+      ESP_LOGI(TAG, "Restarting...\n");
+      ESP.restart();
+    }
   }
+
+  ESP_LOGI(TAG, "No updates found\n");
 }
 
-void GitHubOTA::update_firmware(String url)
+HTTPUpdateResult GitHubOTA::update_firmware(String url)
 {
   const char *TAG = "update_firmware";
   ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
 
   _wifi_client.setInsecure(); // Running OOM when using second certificate
   auto result = Updater.update(_wifi_client, url);
+
   print_update_result(result, TAG);
+  return result;
 }
 
-void GitHubOTA::update_filesystem(String url)
+HTTPUpdateResult GitHubOTA::update_filesystem(String url)
 {
   const char *TAG = "update_filesystem";
   ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
@@ -111,21 +139,22 @@ void GitHubOTA::update_filesystem(String url)
 #endif
 
   print_update_result(result, TAG);
+  return result;
 }
 
 void GitHubOTA::print_update_result(HTTPUpdateResult result, const char *TAG)
 {
   switch (result)
   {
-  case HTTP_UPDATE_FAILED:
-    ESP_LOGI(TAG, "HTTP_UPDATE_FAILD Error (%d): %s\n", Updater.getLastError(), Updater.getLastErrorString().c_str());
-    break;
-  case HTTP_UPDATE_NO_UPDATES:
-    ESP_LOGI(TAG, "HTTP_UPDATE_NO_UPDATES\n");
-    break;
-  case HTTP_UPDATE_OK:
-    ESP_LOGI(TAG, "HTTP_UPDATE_OK\n");
-    break;
+    case HTTP_UPDATE_FAILED:
+      ESP_LOGI(TAG, "HTTP_UPDATE_FAILED Error (%d): %s\n", Updater.getLastError(), Updater.getLastErrorString().c_str());
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      ESP_LOGI(TAG, "HTTP_UPDATE_NO_UPDATES\n");
+      break;
+    case HTTP_UPDATE_OK:
+      ESP_LOGI(TAG, "HTTP_UPDATE_OK\n");
+      break;
   }
 }
 
@@ -136,21 +165,16 @@ String GitHubOTA::get_updated_base_url_via_api()
 
   String base_url = "";
 
-#define CONTENT_LENGTH_HEADER "content-length"
   HTTPClient https;
   // https.useHTTP10(true);
   // https.addHeader("Accept-Encoding", "identity");
-  const char *headerKeys[] = {CONTENT_LENGTH_HEADER};
-  https.collectHeaders(headerKeys, sizeof(headerKeys) / sizeof(headerKeys)[0]);
 
-  ESP_LOGI(TAG, "https.begin\n");
   if (!https.begin(_wifi_client, _release_url))
   {
     ESP_LOGI(TAG, "[HTTPS] Unable to connect\n");
     return base_url;
   }
 
-  ESP_LOGI(TAG, "https.GET\n");
   int httpCode = https.GET();
   if (httpCode < 0)
   {
@@ -162,28 +186,19 @@ String GitHubOTA::get_updated_base_url_via_api()
   }
   else if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
   {
-    ESP_LOGI(TAG, "https.header\n");
-    auto length = https.header(CONTENT_LENGTH_HEADER);
-    auto content_length = length.toInt();
+    StaticJsonDocument<64> filter;
+    filter["html_url"] = true;
+    filter["name"] = true;
 
-    ESP_LOGI(TAG, "https.getStream\n");
-    DynamicJsonDocument doc(content_length);
-    deserializeJson(doc, https.getStream());
-    auto _new_version = from_string(doc["name"]);
-    ESP_LOGV(TAG, "Newest version: %s\n", render_to_string(&_new_version).c_str());
-    ESP_LOGV(TAG, "Current version: %s\n", render_to_string(&_version).c_str());
-    ESP_LOGV(TAG, "Need update: %s\n", _new_version > _version ? "yes" : "no");
+    StaticJsonDocument<256> doc;
+    auto result = deserializeJson(doc, https.getStream(), DeserializationOption::Filter(filter));
+    if (result != DeserializationError::Ok) {
+      ESP_LOGI(TAG, "deserializeJson error %s\n", result.c_str());
+    }
 
-    if (_new_version > _version)
-    {
-      base_url = String((const char *)doc["html_url"]);
-      base_url.replace("tag", "download");
-      base_url += "/";
-    }
-    else
-    {
-      ESP_LOGI(TAG, "No updates found\n");
-    }
+    base_url = String((const char *)doc["html_url"]);
+    base_url.replace("tag", "download");
+    base_url += "/";
   }
 
   https.end();
@@ -203,20 +218,9 @@ String GitHubOTA::get_updated_base_url_via_redirect()
     return "";
   }
 
-  auto last_slash = location.lastIndexOf('/');
-  auto semver_str = location.substring(last_slash + 1);
-
-  auto _newest_version = from_string(semver_str.c_str());
-  ESP_LOGV(TAG, "Newest version: %s\n", render_to_string(&_newest_version).c_str());
-  ESP_LOGV(TAG, "Current version: %s\n", render_to_string(&_version).c_str());
-  ESP_LOGV(TAG, "Need update: %s\n", _newest_version > _version ? "yes" : "no");
-
   String base_url = "";
-  if (_newest_version > _version)
-  {
-    base_url = location + "/";
-    base_url.replace("tag", "download");
-  }
+  base_url = location + "/";
+  base_url.replace("tag", "download");
 
   ESP_LOGV(TAG, "returns: %s\n", base_url.c_str());
   return base_url;
@@ -247,6 +251,32 @@ String GitHubOTA::get_redirect_location(String initial_url)
 
   ESP_LOGV(TAG, "returns: %s\n", redirect_url.c_str());
   return redirect_url;
+}
+
+bool GitHubOTA::update_required(semver_t _new_version){
+  return _new_version > _version;
+}
+
+bool GitHubOTA::fs_update_pending() {
+  return LittleFS.exists(_fs_pending_filename);
+}
+
+void GitHubOTA::fs_schedule_update() {
+  File file = LittleFS.open(_fs_pending_filename, "w");
+  if (!file) {
+    ESP_LOGV("fs_schedule_update", "Failed to open file for writing\n");
+    return;
+  }
+
+  ESP_LOGI("fs_schedule_update", "schecduled\n");
+  delay(2000);
+  file.close();
+}
+
+void GitHubOTA::fs_update_finished() {
+  if (!LittleFS.remove(_fs_pending_filename)) {
+    ESP_LOGV("fs_schedule_update", "Could not delete file: %s\n", _fs_pending_filename.c_str());
+  }
 }
 
 void update_started()
