@@ -28,3 +28,12 @@ Brings same functionality to Arduino platform
 
 This library is under development and may not work every time. <br />
 Feel free to open Issues or create Pull requests :) 
+
+
+# CHANGELOG.md
+
+## 0.1.1 (2023-06-13)
+
+Features:
+
+  - add support for OTA LittleFS support -> [Issue #3](https://github.com/axcap/Esp-GitHub-OTA/issues/3) (Currently only tested on esp8266 (NodeMCU v3)
