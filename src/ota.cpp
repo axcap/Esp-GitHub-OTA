@@ -137,12 +137,18 @@ String get_redirect_location(String initial_url, WiFiClientSecure *client)
 
     HTTPClient https;
     https.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+    client->setInsecure();
+    bool mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
+    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+    if (mfln) { client->setBufferSizes(1024, 1024); }
     ESP_LOGV(TAG, "https.begin(%s)\n", initial_url.c_str());
     if (https.begin(*client, initial_url))
     {
         ESP_LOGV(TAG, "https.GET()\n");
-        int httpCode = https.GET();        
-        ESP_LOGV(TAG, "httpCode = %d\n", httpCode);
+        int httpCode = https.GET();
+        char errortext[128];
+        int errCode = client->getLastSSLError(errortext, 128);
+        ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errortext);
         if (httpCode != HTTP_CODE_FOUND)
         {
             ESP_LOGE(TAG, "[HTTPS] GET... failed, No redirect\n");
@@ -208,9 +214,16 @@ String get_updated_firmware_url_via_api(String releaseUrl, WiFiClientSecure *cli
     https.collectHeaders(headerKeys, sizeof(headerKeys) / sizeof(headerKeys)[0]);
 
     client->setInsecure();
+    bool mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
+    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+    if (mfln) { client->setBufferSizes(1024, 1024); }
     if (https.begin(*client, releaseUrl))
     {
+        ESP_LOGV(TAG, "https.GET()\n");
         int httpCode = https.GET();
+        char errortext[128];
+        int errCode = client->getLastSSLError(errortext, 128);
+        ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errortext);
         if (httpCode < 0)
         {
             ESP_LOGI(TAG, "[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
@@ -241,7 +254,7 @@ String get_updated_firmware_url_via_api(String releaseUrl, WiFiClientSecure *cli
                     }
                 }
 
-                throw("No binary file found");
+                ESP_LOGE(TAG, "[HTTPS] No binary file found\n");
             }
             else
             {
