@@ -233,7 +233,15 @@ String get_updated_firmware_url_via_api(String releaseUrl, WiFiClientSecure *cli
 
             if (_new_version > current_version)
             {
-                browser_download_url = doc["assets"][0]["browser_download_url"];
+                JsonArray assets = doc["assets"].as<JsonArray>();
+                for (JsonObject asset : assets) {
+                    if(asset["name"] == _binary_filename){
+                        browser_download_url = asset["browser_download_url"].as<const char *>();
+                        break;
+                    }
+                }
+
+                throw("No binary file found");
             }
             else
             {
