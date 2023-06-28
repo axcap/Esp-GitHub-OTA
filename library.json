@@ -1,6 +1,6 @@
 {
     "name": "Esp-GitHub-OTA",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Arduino OTA updater that uses Github releases as storage",
     "keywords": "arduino, esp8266, esp32, ota, github",
     "authors":
@@ -8,6 +8,10 @@
       {
         "name": "Akhsarbek Gozoev",
         "url": "https://github.com/axcap"
+      },
+      {
+        "name": "Lorenzo Baldini",
+        "url": "https://github.com/lollobaldo"
       }
     ],
     "repository":

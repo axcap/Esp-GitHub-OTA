@@ -29,8 +29,13 @@ Brings same functionality to Arduino platform
 This library is under development and may not work every time. <br />
 Feel free to open Issues or create Pull requests :) 
 
+# Contributers.md
+Lorenzo Baldini ([lollobaldo](https://github.com/lollobaldo)) - Reduced memory footprint by adding MFLN support
 
 # CHANGELOG.md
+
+## 0.1.2 (2023-06-28)
+Memory footprint reduction by Lorenzo Baldini
 
 ## 0.1.1 (2023-06-13)
 
