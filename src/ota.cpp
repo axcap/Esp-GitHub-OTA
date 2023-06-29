@@ -47,7 +47,8 @@ GitHubOTA::GitHubOTA(
     String fs_pending_filename,
     bool fetch_url_via_redirect)
 {
-  ESP_LOGV("GitHubOTA", "GitHubOTA(version: %s, fetch_url_via_redirect: %d)\n", version.c_str(), fetch_url_via_redirect);
+  ESP_LOGV("GitHubOTA", "GitHubOTA(version: %s, firmware_name: %s, filesystem_name: %s, fetch_url_via_redirect: %d)\n",
+           version.c_str(), firmware_name.c_str(), filesystem_name.c_str(), fetch_url_via_redirect);
 
   LittleFS.begin();
 
@@ -144,8 +145,7 @@ HTTPUpdateResult GitHubOTA::update_filesystem(String url)
 
 void GitHubOTA::print_update_result(HTTPUpdateResult result, const char *TAG)
 {
-  switch (result)
-  {
+  switch (result){
     case HTTP_UPDATE_FAILED:
       ESP_LOGI(TAG, "HTTP_UPDATE_FAILED Error (%d): %s\n", Updater.getLastError(), Updater.getLastErrorString().c_str());
       break;
@@ -163,11 +163,12 @@ String GitHubOTA::get_updated_base_url_via_api()
   const char *TAG = "get_updated_base_url_via_api";
   ESP_LOGI(TAG, "Release_url: %s\n", _release_url.c_str());
 
+  HTTPClient https;
   String base_url = "";
 
-  HTTPClient https;
-  // https.useHTTP10(true);
-  // https.addHeader("Accept-Encoding", "identity");
+  bool mfln = _wifi_client.probeMaxFragmentLength("github.com", 443, 1024);
+  ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+  if (mfln) { _wifi_client.setBufferSizes(1024, 1024); }
 
   if (!https.begin(_wifi_client, _release_url))
   {
@@ -176,19 +177,17 @@ String GitHubOTA::get_updated_base_url_via_api()
   }
 
   int httpCode = https.GET();
-  if (httpCode < 0)
+  if (httpCode < 0 || httpCode >= 400)
   {
     ESP_LOGI(TAG, "[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
-  }
-  else if (httpCode >= 400)
-  {
-    ESP_LOGI(TAG, "[HTTPS] GET... failed, HTTP Status code: %d\n", httpCode);
+    char errorText[128];
+    int errCode = _wifi_client.getLastSSLError(errorText, sizeof(errorText));
+    ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errorText);
   }
   else if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
   {
     StaticJsonDocument<64> filter;
     filter["html_url"] = true;
-    filter["name"] = true;
 
     StaticJsonDocument<256> doc;
     auto result = deserializeJson(doc, https.getStream(), DeserializationOption::Filter(filter));
@@ -233,6 +232,11 @@ String GitHubOTA::get_redirect_location(String initial_url)
 
   HTTPClient https;
   https.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+
+  bool mfln = _wifi_client.probeMaxFragmentLength("github.com", 443, 1024);
+  ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+  if (mfln) { _wifi_client.setBufferSizes(1024, 1024); }
+
   if (!https.begin(_wifi_client, initial_url))
   {
     ESP_LOGE(TAG, "[HTTPS] Unable to connect\n");
@@ -240,10 +244,12 @@ String GitHubOTA::get_redirect_location(String initial_url)
   }
 
   int httpCode = https.GET();
-  ESP_LOGV(TAG, "httpCode = %d\n", httpCode);
   if (httpCode != HTTP_CODE_FOUND)
   {
     ESP_LOGE(TAG, "[HTTPS] GET... failed, No redirect\n");
+    char errorText[128];
+    int errCode = _wifi_client.getLastSSLError(errorText, sizeof(errorText));
+    ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errorText);
   }
 
   String redirect_url = https.getLocation();

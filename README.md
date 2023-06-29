@@ -3,6 +3,13 @@
 | [Esp8266](https://github.com/axcap/ESP8266_example)  | [![CI-Arduino-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml)  | [![CI-PlatformIO-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml)  |
 |  [Esp32](https://github.com/axcap/ESP32_example) | [![CI-Arduino-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml)  | [![CI-PlatformIO-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml)  |
 
+# esp-github-ota
+Inspired by [Esp-GitHub-OTA](https://github.com/axcap/Esp-GitHub-OTA) by **Akhsarbek Gozoev**.
+
+This is a fork of the original library with only minor tweaks:
+
+- Added variable for firmware_name. This allows multiple firmware files to be generared in the same release.
+
 # Esp-GitHub-OTA
 
 Inspired by [esp_ghota](https://github.com/Fishwaldo/esp_ghota) by **Fishwaldo**
