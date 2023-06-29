@@ -1,29 +1,29 @@
 {
-    "name": "Esp-GitHub-OTA",
-    "version": "0.1.2",
-    "description": "Arduino OTA updater that uses Github releases as storage",
-    "keywords": "arduino, esp8266, esp32, ota, github",
-    "authors":
-    [
-      {
-        "name": "Akhsarbek Gozoev",
-        "url": "https://github.com/axcap"
-      },
-      {
-        "name": "Lorenzo Baldini",
-        "url": "https://github.com/lollobaldo"
-      }
-    ],
-    "repository":
+  "name": "Esp-GitHub-OTA",
+  "version": "0.1.2",
+  "description": "Arduino OTA updater that uses Github releases as storage",
+  "keywords": "arduino, esp8266, esp32, ota, github",
+  "authors":
+  [
     {
-      "type": "git",
-      "url": "https://github.com/lollobaldo/esp-github-ota.git"
+      "name": "Akhsarbek Gozoev",
+      "url": "https://github.com/axcap"
     },
-    "license": "MIT",
-    "homepage": "https://github.com/lollobaldo/esp-github-ota",
-    "dependencies": {
-        "bblanchon/ArduinoJson": "^6.21.2"
-    },
-    "frameworks": ["arduino"],
-    "platforms": ["espressif8266", "espressif32"]
-  }
+    {
+      "name": "Lorenzo Baldini",
+      "url": "https://github.com/lollobaldo"
+    }
+  ],
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/axcap/Esp-GitHub-OTA.git"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/axcap/Esp-GitHub-OTA",
+  "dependencies": {
+      "bblanchon/ArduinoJson": "^6.21.2"
+  },
+  "frameworks": ["arduino"],
+  "platforms": ["espressif8266", "espressif32"]
+}
