@@ -1,6 +1,6 @@
 {
-    "name": "esp-github-ota",
-    "version": "0.0.12",
+    "name": "Esp-GitHub-OTA",
+    "version": "0.1.2",
     "description": "Arduino OTA updater that uses Github releases as storage",
     "keywords": "arduino, esp8266, esp32, ota, github",
     "authors":
@@ -22,7 +22,7 @@
     "license": "MIT",
     "homepage": "https://github.com/lollobaldo/esp-github-ota",
     "dependencies": {
-        "bblanchon/ArduinoJson": "^6.20.0"
+        "bblanchon/ArduinoJson": "^6.21.2"
     },
     "frameworks": ["arduino"],
     "platforms": ["espressif8266", "espressif32"]

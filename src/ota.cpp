@@ -1,11 +1,11 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266httpUpdate.h>
-#define ESP_LOGE(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGW(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGI(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGD(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
-#define ESP_LOGV(tag, ...) Serial.printf("[ %s ]", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGE(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGW(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGI(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGD(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
+#define ESP_LOGV(tag, ...) Serial.printf("[ %s ] ", tag); Serial.printf(__VA_ARGS__)
 #elif defined(ESP32)
 #include <WiFiClientSecure.h>
 #include <Update.h>
@@ -13,15 +13,10 @@
 #include <HTTPUpdate.h>
 #endif
 
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "semver_extensions.h"
 #include "ota.h"
-
-bool _fetch_url_via_redirect = false;
-String _binary_filename = "firmware.bin";
-
-WiFiClientSecure client;
-semver_t current_version;
 
 #ifdef ESP8266
 ESP8266HTTPUpdate Updater;
@@ -29,270 +24,289 @@ ESP8266HTTPUpdate Updater;
 HTTPUpdate Updater;
 #endif
 
-// Private function definitions
-void update_firmware(String url);
-void update_filesystem(String url);
-void print_update_result(HTTPUpdateResult result, const char* TAG);
-String get_redirect_location(String initial_url, WiFiClientSecure *client);
-
-
-void init_ota(String version)
+// Set time via NTP, as required for x.509 validation
+void syncClock()
 {
-    init_ota(version, _binary_filename, false);
+  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+
+  time_t now = time(nullptr);
+  while (now < 8 * 3600 * 2)
+  {
+    delay(100);
+    now = time(nullptr);
+  }
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
 }
 
-void init_ota(String version, String filename, bool fetch_url_via_redirect = false)
+GitHubOTA::GitHubOTA(
+    String version,
+    String release_url,
+    String firmware_name,
+    String filesystem_name,
+    String fs_pending_filename,
+    bool fetch_url_via_redirect)
 {
-    ESP_LOGE("init_ota", "init_ota(version: %s, filename: %s, fetch_url_via_redirect: %d)\n",
-        version.c_str(), filename.c_str(), fetch_url_via_redirect);
+  ESP_LOGV("GitHubOTA", "GitHubOTA(version: %s, firmware_name: %s, filesystem_name: %s, fetch_url_via_redirect: %d)\n",
+           version.c_str(), firmware_name.c_str(), filesystem_name.c_str(), fetch_url_via_redirect);
 
-    Updater.rebootOnUpdate(false);
-    _fetch_url_via_redirect = fetch_url_via_redirect;
-    _binary_filename = filename;
-    current_version = from_string(version.c_str());
+  LittleFS.begin();
 
+  _version = from_string(version.c_str());
+  _release_url = release_url;
+  _firmware_name = firmware_name;
+  _filesystem_name = filesystem_name;
+  _fs_pending_filename = fs_pending_filename;
+  _fetch_url_via_redirect = fetch_url_via_redirect;
+
+  Updater.rebootOnUpdate(false);
 #ifdef ESP32
-    client.setCACert(github_certificate);
+  _wifi_client.setCACert(github_certificate);
 #elif defined(ESP8266)
-    // BearSSL::X509List x509(github_certificate);
-    // client.setTrustAnchors(&x509);
-    client.setInsecure();
+  // _wifi_client.setInsecure();
+  _x509.append(github_certificate);
+  _wifi_client.setTrustAnchors(&_x509);
 #endif
+
 #ifdef LED_BUILTIN
-    Updater.setLedPin(LED_BUILTIN, LOW);
+  Updater.setLedPin(LED_BUILTIN, LOW);
 #endif
-    Updater.onStart(update_started);
-    Updater.onEnd(update_finished);
-    Updater.onProgress(update_progress);
-    Updater.onError(update_error);
-    Updater.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+  Updater.onStart(update_started);
+  Updater.onEnd(update_finished);
+  Updater.onProgress(update_progress);
+  Updater.onError(update_error);
+  Updater.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
 }
 
-void handle_ota(String releaseUrl)
+void GitHubOTA::handle()
 {
-    const char *TAG = "handle_ota";
+  const char *TAG = "handle";
+  syncClock();
 
-    String url = _fetch_url_via_redirect ?
-        get_updated_firmware_url_via_redirect(releaseUrl, &client) :
-        get_updated_firmware_url_via_api(releaseUrl, &client);
+  String base_url = _fetch_url_via_redirect ? get_updated_base_url_via_redirect() : get_updated_base_url_via_api();
+  ESP_LOGI(TAG, "base_url %s\n", base_url.c_str());
 
-    ESP_LOGV(TAG, "get_updated_firmware_url returned: %s\n", url.c_str());
+  if (fs_update_pending()){
+    auto result = update_filesystem(base_url + _filesystem_name);
 
-    if (url.length() > 0)
-    {
-        update_firmware(url);
-
-        // url.replace("firmware", "filesystem");
-        // update_filesystem(url);
-
-        delay(1000);
-        ESP.restart();
+    if (result != HTTP_UPDATE_FAILED){
+      fs_update_finished();
     }
+
+    ESP_LOGI(TAG, "Restarting...\n");
+    ESP.restart();
+  } else {
+    auto last_slash = base_url.lastIndexOf('/', base_url.length()-2);
+    auto semver_str = base_url.substring(last_slash + 1);
+    auto _new_version = from_string(semver_str.c_str());
+
+    if (update_required(_new_version)){
+      auto result = update_firmware(base_url + _firmware_name);
+
+      if (result != HTTP_UPDATE_FAILED){
+        fs_schedule_update();
+      }
+
+      ESP_LOGI(TAG, "Restarting...\n");
+      ESP.restart();
+    }
+  }
+
+  ESP_LOGI(TAG, "No updates found\n");
 }
 
-void update_firmware(String url){
-    const char *TAG = "update_firmware";
+HTTPUpdateResult GitHubOTA::update_firmware(String url)
+{
+  const char *TAG = "update_firmware";
+  ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
 
-    ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
+  _wifi_client.setInsecure(); // Running OOM when using second certificate
+  auto result = Updater.update(_wifi_client, url);
 
-    auto result = Updater.update(client, url);
-    print_update_result(result, TAG);
+  print_update_result(result, TAG);
+  return result;
 }
 
-void update_filesystem(String url){
-    const char *TAG = "update_filesystem";
-
-    ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
+HTTPUpdateResult GitHubOTA::update_filesystem(String url)
+{
+  const char *TAG = "update_filesystem";
+  ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
 
 #ifdef ESP8266
-    auto result = Updater.updateFS(client, url);
+  _wifi_client.setInsecure(); // Running OOM when using second certificate
+  auto result = Updater.updateFS(_wifi_client, url);
 #elif defined(ESP32)
-    auto result = Updater.updateSpiffs(client, url);
+  auto result = Updater.updateSpiffs(_wifi_client, url);
 #endif
 
-    print_update_result(result, TAG);
+  print_update_result(result, TAG);
+  return result;
 }
 
-void print_update_result(HTTPUpdateResult result, const char* TAG){
-    switch (result)
-    {
-        case HTTP_UPDATE_FAILED:
-            ESP_LOGI(TAG, "HTTP_UPDATE_FAILD Error (%d): %s\n", Updater.getLastError(), Updater.getLastErrorString().c_str());
-            break;
-        case HTTP_UPDATE_NO_UPDATES:
-            ESP_LOGI(TAG, "HTTP_UPDATE_NO_UPDATES\n");
-            break;
-        case HTTP_UPDATE_OK:
-            ESP_LOGI(TAG, "HTTP_UPDATE_OK\n");
-            break;
-    }
-}
-
-String get_redirect_location(String initial_url, WiFiClientSecure *client)
+void GitHubOTA::print_update_result(HTTPUpdateResult result, const char *TAG)
 {
-    const char *TAG = "get_redirect_location";
-
-    ESP_LOGV(TAG, "initial_url: %s\n", initial_url.c_str());
-    String redirect_url = "";
-
-    HTTPClient https;
-    https.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
-    client->setInsecure();
-    bool mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
-    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
-    if (mfln) { client->setBufferSizes(1024, 1024); }
-    ESP_LOGV(TAG, "https.begin(%s)\n", initial_url.c_str());
-    if (https.begin(*client, initial_url))
-    {
-        ESP_LOGV(TAG, "https.GET()\n");
-        int httpCode = https.GET();
-        char errortext[128];
-        int errCode = client->getLastSSLError(errortext, 128);
-        ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errortext);
-        if (httpCode != HTTP_CODE_FOUND)
-        {
-            ESP_LOGE(TAG, "[HTTPS] GET... failed, No redirect\n");
-        }
-
-        redirect_url = https.getLocation();
-        https.end();
-    }
-    else
-    {
-        ESP_LOGE(TAG, "[HTTPS] Unable to connect\n");
-    }
-
-    ESP_LOGV(TAG, "returns: %s\n", redirect_url.c_str());
-    return redirect_url;
+  switch (result){
+    case HTTP_UPDATE_FAILED:
+      ESP_LOGI(TAG, "HTTP_UPDATE_FAILED Error (%d): %s\n", Updater.getLastError(), Updater.getLastErrorString().c_str());
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      ESP_LOGI(TAG, "HTTP_UPDATE_NO_UPDATES\n");
+      break;
+    case HTTP_UPDATE_OK:
+      ESP_LOGI(TAG, "HTTP_UPDATE_OK\n");
+      break;
+  }
 }
 
-String get_updated_firmware_url_via_redirect(String releaseUrl, WiFiClientSecure *client)
+String GitHubOTA::get_updated_base_url_via_api()
 {
-    const char *TAG = "get_updated_firmware_url_via_redirect";
+  const char *TAG = "get_updated_base_url_via_api";
+  ESP_LOGI(TAG, "Release_url: %s\n", _release_url.c_str());
 
-    ESP_LOGV(TAG, "releaseUrl: %s\n", releaseUrl.c_str());
-    String browser_download_url = "";
+  HTTPClient https;
+  String base_url = "";
 
-    auto location = get_redirect_location(releaseUrl, client);
-    if (location.length() > 0)
-    {
-        ESP_LOGV(TAG, "location: %s\n", location.c_str());
-        auto last_slash = location.lastIndexOf('/');
-        auto semver_str = location.substring(last_slash + 1);
+  bool mfln = _wifi_client.probeMaxFragmentLength("github.com", 443, 1024);
+  ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+  if (mfln) { _wifi_client.setBufferSizes(1024, 1024); }
 
-        auto _new_version = from_string(semver_str.c_str());
-        ESP_LOGV(TAG, "Newest version: %s\n", render_to_string(&_new_version).c_str());
-        ESP_LOGV(TAG, "Current version: %s\n", render_to_string(&current_version).c_str());
-        ESP_LOGV(TAG, "Need update: %s\n", _new_version > current_version ? "yes" : "no");
-        if (_new_version > current_version)
-        {
-            browser_download_url = String(location + "/" + _binary_filename);
-            browser_download_url.replace("tag", "download");
-        }
+  if (!https.begin(_wifi_client, _release_url))
+  {
+    ESP_LOGI(TAG, "[HTTPS] Unable to connect\n");
+    return base_url;
+  }
+
+  int httpCode = https.GET();
+  if (httpCode < 0 || httpCode >= 400)
+  {
+    ESP_LOGI(TAG, "[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
+    char errorText[128];
+    int errCode = _wifi_client.getLastSSLError(errorText, sizeof(errorText));
+    ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errorText);
+  }
+  else if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+  {
+    StaticJsonDocument<64> filter;
+    filter["html_url"] = true;
+
+    StaticJsonDocument<256> doc;
+    auto result = deserializeJson(doc, https.getStream(), DeserializationOption::Filter(filter));
+    if (result != DeserializationError::Ok) {
+      ESP_LOGI(TAG, "deserializeJson error %s\n", result.c_str());
     }
-    else
-    {
-        ESP_LOGE(TAG, "[HTTPS] No redirect url\n");
-    }
 
-    ESP_LOGV(TAG, "returns: %s\n", browser_download_url.c_str());
-    return browser_download_url;
+    base_url = String((const char *)doc["html_url"]);
+    base_url.replace("tag", "download");
+    base_url += "/";
+  }
+
+  https.end();
+  return base_url;
 }
 
-String get_updated_firmware_url_via_api(String releaseUrl, WiFiClientSecure *client)
+String GitHubOTA::get_updated_base_url_via_redirect()
 {
-    const char *TAG = "get_updated_firmware_url_via_api";
+  const char *TAG = "get_updated_base_url_via_redirect";
 
-    ESP_LOGI(TAG, "releaseUrl: %s\n", releaseUrl.c_str());
+  String location = get_redirect_location(_release_url);
+  ESP_LOGV(TAG, "location: %s\n", location.c_str());
 
-    auto browser_download_url = "";
+  if (location.length() <= 0)
+  {
+    ESP_LOGE(TAG, "[HTTPS] No redirect url\n");
+    return "";
+  }
 
-    HTTPClient https;
-    https.useHTTP10(true);
-    https.addHeader("Accept-Encoding", "identity");
-    const char *headerKeys[] = {CONTENT_LENGTH_HEADER};
-    https.collectHeaders(headerKeys, sizeof(headerKeys) / sizeof(headerKeys)[0]);
+  String base_url = "";
+  base_url = location + "/";
+  base_url.replace("tag", "download");
 
-    client->setInsecure();
-    bool mfln = client->probeMaxFragmentLength("github.com", 443, 1024);
-    ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
-    if (mfln) { client->setBufferSizes(1024, 1024); }
-    if (https.begin(*client, releaseUrl))
-    {
-        ESP_LOGV(TAG, "https.GET()\n");
-        int httpCode = https.GET();
-        char errortext[128];
-        int errCode = client->getLastSSLError(errortext, 128);
-        ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errortext);
-        if (httpCode < 0)
-        {
-            ESP_LOGI(TAG, "[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
-        }
-        else if (httpCode >= 400)
-        {
-            ESP_LOGI(TAG, "[HTTPS] GET... failed, HTTP Status code: %d\n", httpCode);
-        }
-        else if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-        {
-            auto length = https.header(CONTENT_LENGTH_HEADER);
-            auto content_length = length.toInt();
+  ESP_LOGV(TAG, "returns: %s\n", base_url.c_str());
+  return base_url;
+}
 
-            DynamicJsonDocument doc(content_length);
-            deserializeJson(doc, https.getStream());
-            auto _new_version = from_string(doc["name"]);
-            ESP_LOGV(TAG, "Newest version: %s\n", render_to_string(&_new_version).c_str());
-            ESP_LOGV(TAG, "Current version: %s\n", render_to_string(&current_version).c_str());
-            ESP_LOGV(TAG, "Need update: %s\n", _new_version > current_version ? "yes" : "no");
+String GitHubOTA::get_redirect_location(String initial_url)
+{
+  const char *TAG = "get_redirect_location";
+  ESP_LOGV(TAG, "initial_url: %s\n", initial_url.c_str());
 
-            if (_new_version > current_version)
-            {
-                JsonArray assets = doc["assets"].as<JsonArray>();
-                for (JsonObject asset : assets) {
-                    if(asset["name"] == _binary_filename){
-                        browser_download_url = asset["browser_download_url"].as<const char *>();
-                        break;
-                    }
-                }
+  HTTPClient https;
+  https.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
 
-                ESP_LOGE(TAG, "[HTTPS] No binary file found\n");
-            }
-            else
-            {
-                ESP_LOGI(TAG, "No updates found\n");
-            }
-        }
+  bool mfln = _wifi_client.probeMaxFragmentLength("github.com", 443, 1024);
+  ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
+  if (mfln) { _wifi_client.setBufferSizes(1024, 1024); }
 
-        https.end();
-    }
-    else
-    {
-        ESP_LOGI(TAG, "[HTTPS] Unable to connect\n");
-    }
+  if (!https.begin(_wifi_client, initial_url))
+  {
+    ESP_LOGE(TAG, "[HTTPS] Unable to connect\n");
+    return "";
+  }
 
-    return browser_download_url;
+  int httpCode = https.GET();
+  if (httpCode != HTTP_CODE_FOUND)
+  {
+    ESP_LOGE(TAG, "[HTTPS] GET... failed, No redirect\n");
+    char errorText[128];
+    int errCode = _wifi_client.getLastSSLError(errorText, sizeof(errorText));
+    ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errorText);
+  }
+
+  String redirect_url = https.getLocation();
+  https.end();
+
+  ESP_LOGV(TAG, "returns: %s\n", redirect_url.c_str());
+  return redirect_url;
+}
+
+bool GitHubOTA::update_required(semver_t _new_version){
+  return _new_version > _version;
+}
+
+bool GitHubOTA::fs_update_pending() {
+  return LittleFS.exists(_fs_pending_filename);
+}
+
+void GitHubOTA::fs_schedule_update() {
+  File file = LittleFS.open(_fs_pending_filename, "w");
+  if (!file) {
+    ESP_LOGV("fs_schedule_update", "Failed to open file for writing\n");
+    return;
+  }
+
+  ESP_LOGI("fs_schedule_update", "schecduled\n");
+  delay(2000);
+  file.close();
+}
+
+void GitHubOTA::fs_update_finished() {
+  if (!LittleFS.remove(_fs_pending_filename)) {
+    ESP_LOGV("fs_schedule_update", "Could not delete file: %s\n", _fs_pending_filename.c_str());
+  }
 }
 
 void update_started()
 {
-    ESP_LOGI("update_started", "HTTP update process started\n");
+  ESP_LOGI("update_started", "HTTP update process started\n");
 }
 
 void update_finished()
 {
-    ESP_LOGI("update_finished", "HTTP update process finished\n");
+  ESP_LOGI("update_finished", "HTTP update process finished\n");
 }
 
 void update_progress(int currentlyReceiced, int totalBytes)
 {
-    ESP_LOGI("update_progress", "\rData received, Progress: %.2f %%", 100.0 * currentlyReceiced / totalBytes);
+  ESP_LOGI("update_progress", "\rData received, Progress: %.2f %%", 100.0 * currentlyReceiced / totalBytes);
 }
 
 void update_error(int err)
 {
-    ESP_LOGI("update_error", "HTTP update fatal error code %d\n", err);
+  ESP_LOGI("update_error", "HTTP update fatal error code %d\n", err);
 }
 
-const char *github_certificate = R"(-----BEGIN CERTIFICATE-----
+const char *github_certificate PROGMEM = R"CERT(
+-----BEGIN CERTIFICATE-----
 MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
 MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
 d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD
@@ -313,4 +327,5 @@ hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg
 PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls
 YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk
 CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
------END CERTIFICATE-----)";
+-----END CERTIFICATE-----
+)CERT";

@@ -1,7 +1,7 @@
 |Example(Chip)/Platform   | Arduino  | PlatformIO  |
 |---|---|---|
-| Esp8266  | [![CI-Arduino-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml)  | [![CI-PlatformIO-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml)  |
-|  Esp32 | [![CI-Arduino-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml)  | [![CI-PlatformIO-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml)  |
+| [Esp8266](https://github.com/axcap/ESP8266_example)  | [![CI-Arduino-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp8266.yml)  | [![CI-PlatformIO-Esp8266](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp8266.yml)  |
+|  [Esp32](https://github.com/axcap/ESP32_example) | [![CI-Arduino-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-arduino-esp32.yml)  | [![CI-PlatformIO-Esp32](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml/badge.svg)](https://github.com/axcap/Esp-GitHub-OTA/actions/workflows/ci-platformio-esp32.yml)  |
 
 # esp-github-ota
 Inspired by [Esp-GitHub-OTA](https://github.com/axcap/Esp-GitHub-OTA) by **Akhsarbek Gozoev**.
@@ -35,3 +35,13 @@ Brings same functionality to Arduino platform
 
 This library is under development and may not work every time. <br />
 Feel free to open Issues or create Pull requests :) 
+
+
+# CHANGELOG.md
+
+## 0.1.1 (2023-06-13)
+
+Features:
+
+  - add support for OTA LittleFS support -> [Issue #3](https://github.com/axcap/Esp-GitHub-OTA/issues/3) (Currently only tested on esp8266 (NodeMCU v3)
+  - New interface using C++ Classes
