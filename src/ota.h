@@ -6,6 +6,7 @@
 #include <ESP8266httpUpdate.h>
 #elif defined(ESP32)
 #include <WiFiClientSecure.h>
+#include <HTTPUpdate.h>
 #endif
 
 #include "semver.h"
@@ -43,7 +44,9 @@ private:
   String _fs_pending_filename;
   bool _fetch_url_via_redirect;
   WiFiClientSecure _wifi_client;
+#ifdef ESP8266
   X509List _x509;
+#endif
 };
 
 void update_started();

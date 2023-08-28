@@ -166,9 +166,11 @@ String GitHubOTA::get_updated_base_url_via_api()
   HTTPClient https;
   String base_url = "";
 
+#ifdef ESP8266
   bool mfln = _wifi_client.probeMaxFragmentLength("github.com", 443, 1024);
   ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
   if (mfln) { _wifi_client.setBufferSizes(1024, 1024); }
+#endif
 
   if (!https.begin(_wifi_client, _release_url))
   {
@@ -181,7 +183,11 @@ String GitHubOTA::get_updated_base_url_via_api()
   {
     ESP_LOGI(TAG, "[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
     char errorText[128];
+#ifdef ESP8266
     int errCode = _wifi_client.getLastSSLError(errorText, sizeof(errorText));
+#elif defined(ESP32)
+    int errCode = _wifi_client.lastError(errorText, sizeof(errorText));
+#endif
     ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errorText);
   }
   else if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
@@ -233,9 +239,11 @@ String GitHubOTA::get_redirect_location(String initial_url)
   HTTPClient https;
   https.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
 
+#ifdef ESP8266
   bool mfln = _wifi_client.probeMaxFragmentLength("github.com", 443, 1024);
   ESP_LOGI(TAG, "MFLN supported: %s\n", mfln ? "yes" : "no");
   if (mfln) { _wifi_client.setBufferSizes(1024, 1024); }
+#endif
 
   if (!https.begin(_wifi_client, initial_url))
   {
@@ -248,7 +256,11 @@ String GitHubOTA::get_redirect_location(String initial_url)
   {
     ESP_LOGE(TAG, "[HTTPS] GET... failed, No redirect\n");
     char errorText[128];
+#ifdef ESP8266
     int errCode = _wifi_client.getLastSSLError(errorText, sizeof(errorText));
+#elif defined(ESP32)
+    int errCode = _wifi_client.lastError(errorText, sizeof(errorText));
+#endif
     ESP_LOGV(TAG, "httpCode: %d, errorCode %d: %s\n", httpCode, errCode, errorText);
   }
 
