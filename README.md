@@ -34,6 +34,9 @@ Lorenzo Baldini ([lollobaldo](https://github.com/lollobaldo)) - Reduced memory f
 
 # CHANGELOG.md
 
+## 0.1.4 (2023-09-03)
+Separate firmware and filesystem update code. User now can opt-in to either one or both
+
 ## 0.1.2 (2023-06-28)
 Memory footprint reduction by Lorenzo Baldini
 
