@@ -1,6 +1,6 @@
 {
   "name": "Esp-GitHub-OTA",
-  "version": "0.1.4",
+  "version": "0.1.4-1",
   "description": "Arduino OTA updater that uses Github releases as storage",
   "keywords": "arduino, esp8266, esp32, ota, github",
   "authors":
