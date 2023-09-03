@@ -84,8 +84,11 @@ HTTPUpdateResult GitHubFsOTA::update_filesystem(String url)
   const char *TAG = "update_filesystem";
   ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
 
+#ifdef ESP8266
   auto result = Updater.updateFS(_wifi_client, url);
-
+#elif defined(ESP32)
+  auto result = Updater.updateSpiffs(_wifi_client, url);
+#endif
   print_update_result(Updater, result, TAG);
   return result;
 }
