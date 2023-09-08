@@ -21,6 +21,8 @@ public:
       bool fetch_url_via_redirect = false);
 
   void handle();
+  void update_firmware();
+  semver_t get_newest_version();
 
 private:
 #ifdef ESP8266

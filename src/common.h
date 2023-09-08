@@ -27,13 +27,14 @@ typedef HTTPUpdate Updater;
 
 #include "semver.h"
 
+semver_t common_get_newest_version(bool fetch_url_via_redirect, WiFiClientSecure wifi_client, String release_url);
+String get_base_url(bool fetch_url_via_redirect, WiFiClientSecure wifi_client, String release_url);
+
 String get_updated_base_url_via_api(WiFiClientSecure wifi_client, String release_url);
 String get_updated_base_url_via_redirect(WiFiClientSecure wifi_client, String release_url);
 String get_redirect_location(WiFiClientSecure wifi_client, String initial_url);
 
 void print_update_result(Updater updater, HTTPUpdateResult result, const char *TAG);
-
-bool update_required(semver_t _new_version, semver_t _current_version);
 
 void update_started();
 void update_finished();
