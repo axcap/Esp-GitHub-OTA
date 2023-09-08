@@ -14,6 +14,29 @@
 #include "semver.h"
 #include "semver_extensions.h"
 
+semver_t common_get_newest_version(bool fetch_url_via_redirect, WiFiClientSecure wifi_client, String release_url)
+{
+  auto base_url = get_base_url(fetch_url_via_redirect, wifi_client, release_url);
+
+  auto last_slash = base_url.lastIndexOf('/', base_url.length() - 2);
+  auto semver_str = base_url.substring(last_slash + 1);
+  auto newest_version = semver_from_string(semver_str.c_str());
+
+  return newest_version;
+}
+
+String get_base_url(bool fetch_url_via_redirect, WiFiClientSecure wifi_client, String release_url){
+  const char *TAG = "get_newest_version";
+
+  synchronize_system_time();
+  String base_url = fetch_url_via_redirect ?
+    get_updated_base_url_via_redirect(wifi_client, release_url) :
+    get_updated_base_url_via_api(wifi_client, release_url);
+  ESP_LOGI(TAG, "base_url %s\n", base_url.c_str());
+
+  return base_url;
+}
+
 String get_updated_base_url_via_api(WiFiClientSecure wifi_client, String release_url)
 {
   const char *TAG = "get_updated_base_url_via_api";
@@ -140,10 +163,6 @@ void print_update_result(Updater updater, HTTPUpdateResult result, const char *T
       ESP_LOGI(TAG, "HTTP_UPDATE_OK\n");
       break;
   }
-}
-
-bool update_required(semver_t _new_version, semver_t _current_version){
-  return _new_version > _current_version;
 }
 
 void update_started()

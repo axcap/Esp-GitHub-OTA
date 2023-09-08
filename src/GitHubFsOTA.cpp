@@ -24,7 +24,7 @@ GitHubFsOTA::GitHubFsOTA(
   ESP_LOGV("GitHubFsOTA", "GitHubFsOTA(version: %s, filesystem_name: %s, fetch_url_via_redirect: %d)\n",
            version.c_str(), filesystem_name.c_str(), fetch_url_via_redirect);
 
-  _version = from_string(version.c_str());
+  _version = semver_from_string(version.c_str());
   _release_url = release_url;
   _filesystem_name = filesystem_name;
   _fetch_url_via_redirect = fetch_url_via_redirect;
@@ -50,18 +50,14 @@ GitHubFsOTA::GitHubFsOTA(
 void GitHubFsOTA::handle()
 {
   const char *TAG = "handle";
-  synchronize_system_time();
-
-  String base_url = _fetch_url_via_redirect ?
-    get_updated_base_url_via_redirect(_wifi_client, _release_url) :
-    get_updated_base_url_via_api(_wifi_client, _release_url);
-  ESP_LOGI(TAG, "base_url %s\n", base_url.c_str());
+  
+  auto base_url = get_base_url(_fetch_url_via_redirect, _wifi_client, _release_url);
 
   auto last_slash = base_url.lastIndexOf('/', base_url.length() - 2);
   auto semver_str = base_url.substring(last_slash + 1);
-  auto _new_version = from_string(semver_str.c_str());
+  auto newest_version = semver_from_string(semver_str.c_str());
 
-  if (update_required(_new_version, _version))
+  if (newest_version > _version)
   {
     auto result = update_filesystem(base_url + _filesystem_name);
 
@@ -77,6 +73,16 @@ void GitHubFsOTA::handle()
   }
 
   ESP_LOGI(TAG, "No updates found\n");
+}
+
+semver_t GitHubFsOTA::get_newest_version()
+{
+  return common_get_newest_version(_fetch_url_via_redirect, _wifi_client, _release_url);
+}
+
+void GitHubFsOTA::update_filesystem()
+{
+  handle();
 }
 
 HTTPUpdateResult GitHubFsOTA::update_filesystem(String url)

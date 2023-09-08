@@ -6,8 +6,6 @@
 
 #include "semver.h"
 
-// #include "string_utils.h"
-
 using namespace std;
 
 vector<string> split(const string &s, char delim) {
@@ -22,7 +20,7 @@ vector<string> split(const string &s, char delim) {
     return result;
 }
 
-semver_t from_string(string version){
+semver_t semver_from_string(string version){
     auto numbers = split(version, '.');
     auto major = atoi(numbers.at(0).c_str());
     auto minor = atoi(numbers.at(1).c_str());
@@ -47,18 +45,14 @@ semver_t from_string(string version){
     return _ver;
 }
 
-// string to_string(semver_t* sem){
-//     char *str = (char*)calloc(255, sizeof(char));
-//     semver_render(sem, (char*)str);
-//     auto value = string((char*)str);
-//     free(str);
-//     return value;
-// }
+string semver_to_string(semver_t* sem){
+    char *str = (char*)calloc(255, sizeof(char));
+    semver_render(sem, (char*)str);
+    auto value = string((char*)str);
+    free(str);
+    return value;
+}
 
 bool operator>(const semver_t & x, const semver_t & y) {
     return semver_compare(x, y) > 0;
 }
-
-// bool operator!=(const semver_t & x, const semver_t & y) {
-//     return semver_neq(x, y) == 1;
-// }
