@@ -21,7 +21,7 @@ public:
       bool fetch_url_via_redirect = false);
 
   void handle();
-  void setVersion(String version) {
+  void setVersion(semver_t version) {
     _version = version;
   }
   void setUrl(String url) {
@@ -31,7 +31,7 @@ public:
     _firmware_name = name;
   }
 
-  String getVersion() {
+  semver_t getVersion() {
     return _version;
   }
   String getUrl() {
