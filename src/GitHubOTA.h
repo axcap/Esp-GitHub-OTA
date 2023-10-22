@@ -21,6 +21,25 @@ public:
       bool fetch_url_via_redirect = false);
 
   void handle();
+  void setVersion(semver_t version) {
+    _version = version;
+  }
+  void setUrl(String url) {
+    _release_url = url;
+  }
+  void setFirmwareName(String name) {
+    _firmware_name = name;
+  }
+
+  semver_t getVersion() {
+    return _version;
+  }
+  String getUrl() {
+    return _release_url;
+  }
+  String getFirmwareName() {
+    return _firmware_name;
+  }
 
 private:
 #ifdef ESP8266
