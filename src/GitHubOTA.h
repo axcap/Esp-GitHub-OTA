@@ -31,6 +31,16 @@ public:
     _firmware_name = name;
   }
 
+  String getVersion() {
+    return _version;
+  }
+  String getUrl() {
+    return _release_url;
+  }
+  String getFirmwareName() {
+    return _firmware_name;
+  }
+
 private:
 #ifdef ESP8266
   ESP8266HTTPUpdate Updater;
